@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnySong</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1c2029;
+    --border: #2a2e38;
+    --text: #e8eaf0;
+    --muted: #8a90a2;
+    --accent: #6c5ce7;
+    --accent-hover: #7d6cf0;
+    --error: #ef4444;
+    --ok: #22c55e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 32px 16px;
+  }
+  .page {
+    max-width: 1360px;
+    margin: 0 auto;
+  }
+  .header-row { display: flex; align-items: center; gap: 16px; margin-bottom: 4px; flex-wrap: wrap; }
+  h1 { font-size: 28px; margin: 0; }
+  p.subtitle { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+  #header_progress {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  #header_progress .bar {
+    width: 160px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  #header_progress .bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.3s ease;
+  }
+  #header_progress .pct { font-weight: 600; color: var(--accent); min-width: 34px; }
+
+  .page-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2.3fr) minmax(300px, 1.2fr);
+    gap: 20px;
+    align-items: start;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 1100px) {
+    .page-layout { grid-template-columns: 1fr; }
+    .layout { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab-btn {
+    padding: 10px 20px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 8px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .model-info { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
+  .variation-row { margin-bottom: 10px; }
+  .variation-row:last-child { margin-bottom: 0; }
+  .variation-row .variation-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .variation-row audio { width: 100%; height: 32px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  .panel h2 {
+    font-size: 15px;
+    margin: 0 0 16px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel h2 .num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--muted);
+  }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  input[type="file"] {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0;
+    overflow: hidden;
+  }
+  .file-drop {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    background: #10121a;
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .file-drop:hover { border-color: var(--accent); }
+  .file-drop .file-btn {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: var(--accent);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .file-drop .file-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-drop .file-name.chosen { color: var(--text); }
+  .file-drop:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea, select, input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    background: #10121a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { resize: vertical; }
+  #lyrics { min-height: 260px; line-height: 1.6; }
+  #style_prompt { min-height: 90px; }
+  .row { display: flex; gap: 12px; }
+  .row .field { flex: 1; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .hint code { background: var(--panel-2); padding: 1px 4px; border-radius: 3px; color: var(--text); font-size: 11px; }
+  .hint.error { color: var(--error); }
+  .hint.ok { color: var(--ok); }
+
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .slider-row { display: flex; justify-content: space-between; align-items: baseline; }
+  .slider-value { font-size: 12px; color: var(--accent); font-weight: 600; }
+  .slider-field { margin-bottom: 18px; }
+  .slider-field:last-child { margin-bottom: 0; }
+  .auto-toggle { display: flex; align-items: center; gap: 6px; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .auto-toggle input { accent-color: var(--accent); }
+
+  button { border: none; border-radius: 8px; cursor: pointer; font-family: inherit; }
+  .btn-primary {
+    width: 100%;
+    padding: 13px;
+    background: var(--accent);
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    transition: background 0.15s;
+  }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-secondary {
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  .btn-secondary:hover:not(:disabled) { background: var(--accent); color: white; }
+  .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .inline-btn { width: auto; padding: 4px 10px; font-size: 12px; font-weight: 600; background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+  .inline-btn:hover:not(:disabled) { background: var(--accent); color: white; }
+  .inline-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .inline-btn.primary { background: var(--accent); color: white; }
+  .inline-btn.primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; width: 90%; max-width: 560px; max-height: 80vh;
+    display: flex; flex-direction: column;
+  }
+  .modal-box h3 { margin: 0 0 4px; font-size: 16px; }
+  .saved-styles-list { overflow-y: auto; flex: 1; min-height: 80px; max-height: 50vh; border: 1px solid var(--border); border-radius: 8px; }
+  .saved-styles-empty { padding: 16px; color: var(--muted); font-size: 13px; text-align: center; }
+  .saved-style-row {
+    padding: 10px 12px; border-bottom: 1px solid var(--border); cursor: pointer;
+    font-size: 13px; line-height: 1.4; display: flex; gap: 8px; align-items: flex-start;
+  }
+  .saved-style-row:last-child { border-bottom: none; }
+  .saved-style-row:hover { background: var(--panel-2); }
+  .saved-style-row.selected { background: rgba(108, 92, 231, 0.18); }
+  .saved-style-row input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+  .saved-style-row .text { flex: 1; color: var(--text); }
+  .modal-actions { display: flex; gap: 8px; margin-top: 14px; align-items: center; }
+
+  .lookup-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .lookup-row input { flex: 1; }
+  .lookup-row button { flex-shrink: 0; }
+
+  .lyrics-candidates { margin-bottom: 12px; display: none; flex-direction: column; gap: 6px; }
+  .lyrics-candidate {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .lyrics-candidate .info { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lyrics-candidate .info b { color: var(--text); }
+  .lyrics-candidate .info span { color: var(--muted); }
+
+  #status { margin-top: 16px; font-size: 13px; min-height: 18px; }
+  #status.error {
+    color: var(--error);
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+    cursor: text;
+    background: rgba(220, 50, 50, 0.08);
+    border: 1px solid var(--error);
+    border-radius: 6px;
+    padding: 8px 10px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  #status.ok { color: var(--ok); }
+  #result { margin-top: 18px; display: none; }
+  #result audio { width: 100%; margin-bottom: 10px; }
+  #result a { color: var(--accent); font-size: 13px; text-decoration: none; }
+  #result .metas { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid var(--muted);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* History panel */
+  .history-panel { position: sticky; top: 32px; }
+  #history_list { display: flex; flex-direction: column; gap: 10px; max-height: 80vh; overflow-y: auto; }
+  .history-empty { font-size: 13px; color: var(--muted); }
+  .history-item {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .history-item-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+  .history-item .title { font-size: 13px; font-weight: 600; margin-bottom: 2px; word-break: break-word; }
+  .history-item .meta { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+  .history-item audio { width: 100%; height: 32px; }
+  .history-menu { position: relative; flex-shrink: 0; }
+  .history-menu-btn {
+    width: 22px; height: 22px;
+    padding: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1;
+    border-radius: 4px;
+  }
+  .history-menu-btn:hover { background: var(--border); color: var(--text); }
+  .history-menu-dropdown {
+    display: none;
+    position: absolute;
+    top: 24px; right: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 110px;
+    z-index: 10;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+  .history-menu-dropdown.open { display: block; }
+  .history-menu-dropdown button {
+    width: 100%;
+    padding: 8px 12px;
+    background: transparent;
+    color: var(--error);
+    font-size: 12px;
+    text-align: left;
+    border-radius: 0;
+  }
+  .history-menu-dropdown button:hover { background: var(--panel-2); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header-row">
+    <h1>AnySong</h1>
+    <div id="header_progress">
+      <div class="bar"><div class="bar-fill" id="header_progress_fill"></div></div>
+      <span class="pct" id="header_progress_pct">0%</span>
+      <span id="header_progress_stage"></span>
+    </div>
+  </div>
+  <p class="subtitle" id="page_subtitle">Tải bài hát lên, xác nhận lời gốc, mô tả style bạn muốn, AI tạo bản cover mới.</p>
+
+  <div class="tabs">
+    <button type="button" class="tab-btn active" data-tab="cover">Cover</button>
+    <button type="button" class="tab-btn" data-tab="create">Create</button>
+  </div>
+
+  <div class="page-layout">
+    <div class="tab-content">
+    <div id="tab-cover" class="tab-panel active">
+    <form id="form" class="layout">
+    <div class="col-left">
+
+        <div class="panel">
+          <h2><span class="num">1</span>Bài hát gốc</h2>
+          <div class="field">
+            <label for="song">File nhạc (wav / mp3 / m4a / flac)</label>
+            <label class="file-drop" for="song">
+              <span class="file-btn">Chọn file</span>
+              <span class="file-name" id="song_filename_display">Chưa chọn file nào (bấm để chọn, hoặc bấm lại để đổi file khác)</span>
+            </label>
+            <input type="file" id="song" name="song" accept=".wav,.mp3,.m4a,.flac,.ogg" required>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2><span class="num">2</span>Lời bài hát</h2>
+
+          <div class="lookup-row">
+            <input type="text" id="lyrics_title" placeholder="Tên bài hát">
+            <input type="text" id="lyrics_artist" placeholder="Ca sĩ (không bắt buộc)">
+            <button type="button" id="lyrics_search_btn" class="btn-secondary">Tìm lời</button>
+          </div>
+          <div id="lyrics_candidates" class="lyrics-candidates"></div>
+
+          <div class="field">
+            <label for="lyrics">
+              Nội dung lời
+              <span style="display:flex; gap:6px">
+                <button type="button" id="transcribe_btn" class="inline-btn">Nghe file tự đoán lời</button>
+                <button type="button" id="autotag_btn" class="inline-btn">Tự thêm tag (offline)</button>
+              </span>
+            </label>
+            <textarea id="lyrics" name="lyrics" placeholder="Tìm theo tên bài ở trên (chính xác nhất), hoặc dán tay, hoặc bấm 'Nghe file tự đoán lời' (Whisper, có thể không chính xác 100%). Để trống = tạo bản hoà tấu không lời."></textarea>
+            <div class="hint">Để trống = instrumental (không lời). ACE-Step cần lời chính xác để hát đúng - lời sai/thiếu là nguyên nhân chính khiến bản cover bị biến dạng. Muốn bài có cấu trúc rõ ràng (intro/verse/build/chorus, thay vì chạy phẳng lì) - thêm tag như <code>[Intro]</code>, <code>[Verse]</code>, <code>[Build - rising energy]</code>, <code>[Chorus - powerful]</code>, <code>[Outro - fade out]</code> trước mỗi đoạn lời tương ứng. Gemini hay từ chối chèn tag vào lời có bản quyền - nút "Tự thêm tag (offline)" làm việc này bằng thuật toán phát hiện đoạn lặp lại (không qua AI, không bao giờ bị từ chối) nếu Gemini không hợp tác.</div>
+            <div id="lyrics_status" class="hint"></div>
+          </div>
+        </div>
+    </div>
+
+    <div class="col-middle">
+        <div class="panel">
+          <h2><span class="num">3</span>Style đầu ra</h2>
+          <div class="field">
+            <label for="style_prompt">
+              Mô tả style
+              <button type="button" id="gemini_btn" class="inline-btn">Nhờ Gemini viết prompt</button>
+              <button type="button" id="saved_styles_btn" class="inline-btn">Saved style</button>
+            </label>
+            <textarea id="style_prompt" name="style_prompt" placeholder="Để trống rồi bấm 'Nhờ Gemini viết prompt' = ngẫu nhiên sáng tạo. Gõ vài từ khoá (kể cả từ khoá lạ như 'warhammer dark style') rồi bấm nút đó = AI triển khai thành mô tả đầy đủ. Hoặc tự viết câu mô tả đầy đủ, ví dụ: &quot;An energetic EDM track with heavy sidechained bass, bright synth leads, punchy four-on-the-floor drums, and a euphoric festival atmosphere.&quot;" required></textarea>
+            <div class="hint">Viết câu mô tả đầy đủ (không phải chuỗi từ khoá ngắn) - model được train trên caption dạng câu văn chi tiết: genre, nhạc cụ, không khí, cách sản xuất. Prompt không qua bước AI diễn giải cho tác vụ cover nên càng mô tả rõ càng khớp.</div>
+            <div id="gemini_status" class="hint"></div>
+          </div>
+
+          <div class="field">
+            <label for="vocal_gender">Giọng hát</label>
+            <select id="vocal_gender">
+              <option value="" selected>Không chỉ định</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+              <option value="duet">Song ca (nam & nữ)</option>
+            </select>
+            <div class="hint">Không có tham số riêng cho giọng hát - chọn ở đây sẽ tự thêm mô tả giọng (bằng tiếng Anh, đúng kiểu caption model được train) vào cuối prompt style.</div>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-row">
+              <label for="bpm" style="margin-bottom:0">BPM (tempo)</label>
+              <span class="auto-toggle"><input type="checkbox" id="bpm_auto" checked> Auto (theo bài gốc)</span>
+            </div>
+            <input type="range" id="bpm" name="bpm_slider" min="40" max="220" step="1" value="120" disabled>
+            <div class="slider-row"><span></span><span class="slider-value" id="bpm_val">120 BPM</span></div>
+          </div>
+
+          <div class="slider-field" id="cover_strength_field">
+            <div class="slider-row">
+              <label for="cover_strength" style="margin-bottom:0">Độ bám sát bản gốc</label>
+              <span class="slider-value" id="cover_strength_val">0.7</span>
+            </div>
+            <input type="range" id="cover_strength" name="cover_strength" min="0" max="1" step="0.05" value="0.7">
+            <div class="hint">Thấp = đổi style mạnh hơn (giống style transfer). Cao = giữ sát giai điệu/cấu trúc gốc hơn - nhưng đây là 1 nút chung, kéo cao cũng ép cả nhạc cụ/màu âm giống bản gốc, không chỉ riêng melody. Chỉ áp dụng ở chế độ cover thường - không có tác dụng khi bật "Giữ nguyên melody gốc" (cả 2 cách Tách+Mix và Complete AI đều không dùng nút này).</div>
+          </div>
+
+          <div class="field">
+            <label for="melody_lock" style="margin-bottom:0">
+              <span class="auto-toggle" style="font-size:13px;font-weight:600;color:var(--text)"><input type="checkbox" id="melody_lock" checked> Giữ nguyên melody gốc, đổi tự do nhạc cụ/style</span>
+            </label>
+            <div class="row" id="melody_track_row" style="margin-top:8px">
+              <div class="field">
+                <label for="melody_track">Track giai điệu cần giữ</label>
+                <select id="melody_track">
+                  <option value="vocals" selected>Vocals (giọng hát - phổ biến nhất)</option>
+                  <option value="instrumental">Instrumental (nhạc nền, không lời)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="melody_method">Cách giữ giai điệu</label>
+                <select id="melody_method">
+                  <option value="mix" selected>Tách + Mix (giữ đúng giọng gốc, nhưng nhạc nền không rành mạch bám theo lời hát)</option>
+                  <option value="complete">Complete AI (thử nghiệm - bám sát lời/nhịp hơn, nhưng giọng hát sẽ do AI hát lại)</option>
+                </select>
+              </div>
+            </div>
+            <div class="hint" id="melody_method_hint">3 bước qua model Base + Turbo: Extract track đã chọn (giữ nguyên, 64 bước chất lượng cao) → sinh nhạc nền mới (Turbo, LM-enhanced) → mix lại. Giữ đúng giọng gốc, tự do đổi nhạc cụ/style. Nhạc nền sinh độc lập với lời hát nên có thể lệch nhịp trên bài dài - nếu gặp vậy, thử đổi "Cách giữ giai điệu" sang Complete AI.</div>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-row">
+              <label for="inference_steps" style="margin-bottom:0">Chi tiết (inference steps)</label>
+              <span class="slider-value" id="inference_steps_val">8</span>
+            </div>
+            <input type="range" id="inference_steps" name="inference_steps" min="1" max="20" step="1" value="8">
+            <div class="hint">Cao hơn = chi tiết hơn nhưng chậm hơn. Model turbo khuyến nghị 8; có thể thử 12-16 nếu muốn kỹ hơn.</div>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-row">
+              <label for="num_variations" style="margin-bottom:0">Số bản sinh (chọn bản đẹp nhất)</label>
+              <span class="slider-value" id="num_variations_val">1</span>
+            </div>
+            <input type="range" id="num_variations" name="num_variations" min="1" max="4" step="1" value="1">
+            <div class="hint">Tip chính thức từ ACE-Step: sinh 2-4 bản rồi nghe chọn bản ưng ý nhất, thay vì chỉ lấy 1 kết quả duy nhất. Chậm hơn tương ứng số bản.</div>
+          </div>
+
+          <div class="row" style="margin-top:18px">
+            <div class="field">
+              <label for="vocal_language">Ngôn ngữ giọng hát</label>
+              <select id="vocal_language" name="vocal_language">
+                <option value="vi" selected>Tiếng Việt</option>
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="audio_format">Định dạng xuất</label>
+              <select id="audio_format" name="audio_format">
+                <option value="mp3" selected>MP3</option>
+                <option value="wav">WAV</option>
+                <option value="flac">FLAC</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="field">
+            <span class="auto-toggle" style="font-size:12px"><input type="checkbox" id="auto_gemini" checked> Tự động nhờ Gemini chuẩn hoá Style trước khi tạo</span>
+            <div class="hint">Gọi Gemini thật (cửa sổ ẩn, đăng nhập sẵn) - không cần copy/dán tay nữa. Cần <code>gemini_service</code> đang chạy và đã đăng nhập Google. Kết quả sẽ tự điền vào 2 khung Style/Lời ở trên trước khi bắt đầu tạo.</div>
+          </div>
+          <button type="submit" id="submit_btn" class="btn-primary">Tạo bài hát</button>
+          <div id="status"></div>
+          <div id="result">
+            <audio id="player" controls></audio>
+            <div><a id="download_link" download>Tải file kết quả</a></div>
+            <div class="metas" id="metas"></div>
+            <div id="variations_list" style="display:none; margin-top:12px"></div>
+            <div id="debug_tracks" style="display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--border)">
+              <div class="hint" style="margin-bottom:8px">Kiểm tra riêng từng track (để debug nếu kết quả cuối không như ý - cả Vocals và Instrumental đều được tách sẵn để so sánh, dù chỉ 1 trong 2 được dùng tiếp):</div>
+              <div class="field" id="debug_vocal_field">
+                <label style="margin-bottom:4px">Track Vocals đã tách</label>
+                <audio id="debug_vocal_player" controls style="width:100%; height:32px"></audio>
+              </div>
+              <div class="field" id="debug_instrumental_extract_field">
+                <label style="margin-bottom:4px">Track Instrumental đã tách</label>
+                <audio id="debug_instrumental_extract_player" controls style="width:100%; height:32px"></audio>
+              </div>
+              <div class="field" id="debug_instrumental_field" style="margin-bottom:0">
+                <label style="margin-bottom:4px">Nhạc nền mới sinh (chưa mix)</label>
+                <audio id="debug_instrumental_player" controls style="width:100%; height:32px"></audio>
+              </div>
+            </div>
+          </div>
+          <div class="model-info" id="model_info">Model: đang tải thông tin...</div>
+        </div>
+    </div>
+    </form>
+    </div>
+
+    <div id="tab-create" class="tab-panel">
+    <form id="create_form" class="layout">
+      <div class="col-left">
+        <div class="panel">
+          <h2><span class="num">1</span>Prompt</h2>
+          <div class="field">
+            <label for="create_style_prompt">
+              Mô tả nhạc muốn tạo
+              <span style="display:flex; gap:6px">
+                <button type="button" id="create_gemini_btn" class="inline-btn">Nhờ Gemini viết prompt</button>
+                <button type="button" id="create_saved_styles_btn" class="inline-btn">Saved style</button>
+              </span>
+            </label>
+            <textarea id="create_style_prompt" name="style_prompt" placeholder="Mô tả thể loại/nhạc cụ/không khí bài hát, ví dụ: &quot;An energetic EDM track with heavy sidechained bass, bright synth leads, punchy four-on-the-floor drums, and a euphoric festival atmosphere.&quot;" required></textarea>
+            <div class="hint">Viết câu mô tả đầy đủ (không phải chuỗi từ khoá ngắn) - model được train trên caption dạng câu văn chi tiết: genre, nhạc cụ, không khí, cách sản xuất.</div>
+            <div id="create_gemini_status" class="hint"></div>
+          </div>
+          <div class="field">
+            <label for="create_vocal_gender">Giọng hát</label>
+            <select id="create_vocal_gender">
+              <option value="" selected>Không chỉ định</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+              <option value="duet">Song ca (nam & nữ)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2><span class="num">2</span>Lời bài hát (không bắt buộc)</h2>
+          <div class="field">
+            <label for="create_lyrics">Nội dung lời</label>
+            <textarea id="create_lyrics" name="lyrics" placeholder="Dán lời bài hát vào đây (có thể thêm tag [Verse], [Chorus], [Build]...). Để trống = tạo bản nhạc không lời (instrumental)."></textarea>
+            <div class="hint">Để trống = instrumental (không lời). Muốn bài có cấu trúc rõ ràng - thêm tag như <code>[Intro]</code>, <code>[Verse]</code>, <code>[Chorus - powerful]</code>, <code>[Outro - fade out]</code> trước mỗi đoạn lời tương ứng.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-middle">
+        <div class="panel">
+          <h2><span class="num">3</span>Tham số</h2>
+          <div class="slider-field">
+            <div class="slider-row">
+              <label for="create_duration" style="margin-bottom:0">Thời lượng bài hát</label>
+              <span class="slider-value" id="create_duration_val">120s</span>
+            </div>
+            <input type="range" id="create_duration" min="10" max="300" step="5" value="120">
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-row">
+              <label for="create_bpm" style="margin-bottom:0">BPM (tempo)</label>
+              <span class="auto-toggle"><input type="checkbox" id="create_bpm_auto" checked> Auto (model tự chọn)</span>
+            </div>
+            <input type="range" id="create_bpm" min="40" max="220" step="1" value="120" disabled>
+            <div class="slider-row"><span></span><span class="slider-value" id="create_bpm_val">120 BPM</span></div>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-row">
+              <label for="create_inference_steps" style="margin-bottom:0">Chi tiết (inference steps)</label>
+              <span class="slider-value" id="create_inference_steps_val">8</span>
+            </div>
+            <input type="range" id="create_inference_steps" min="1" max="20" step="1" value="8">
+            <div class="hint">Cao hơn = chi tiết hơn nhưng chậm hơn. Model turbo khuyến nghị 8.</div>
+          </div>
+
+          <div class="slider-field">
+            <div class="slider-row">
+              <label for="create_num_variations" style="margin-bottom:0">Số bản sinh (chọn bản đẹp nhất)</label>
+              <span class="slider-value" id="create_num_variations_val">1</span>
+            </div>
+            <input type="range" id="create_num_variations" min="1" max="4" step="1" value="1">
+          </div>
+
+          <div class="row" style="margin-top:18px">
+            <div class="field">
+              <label for="create_vocal_language">Ngôn ngữ giọng hát</label>
+              <select id="create_vocal_language">
+                <option value="vi" selected>Tiếng Việt</option>
+                <option value="en">English</option>
+                <option value="zh">中文</option>
+                <option value="ja">日本語</option>
+                <option value="ko">한국어</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="create_audio_format">Định dạng xuất</label>
+              <select id="create_audio_format">
+                <option value="mp3" selected>MP3</option>
+                <option value="wav">WAV</option>
+                <option value="flac">FLAC</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <button type="submit" id="create_submit_btn" class="btn-primary">Tạo nhạc</button>
+          <div id="create_status"></div>
+          <div id="create_result">
+            <audio id="create_player" controls></audio>
+            <div><a id="create_download_link" download>Tải file kết quả</a></div>
+            <div class="metas" id="create_metas"></div>
+            <div id="create_variations_list" style="display:none; margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+    </form>
+    </div>
+    </div>
+
+    <div class="col-right">
+      <div class="panel history-panel">
+        <h2>Lịch sử tạo nhạc</h2>
+        <div id="history_list"><div class="history-empty">Chưa có bản nào.</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="saved_styles_overlay" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <h3>Saved style</h3>
+    <div class="hint" style="margin-bottom:10px">Các style đã từng được Gemini tối ưu - chọn 1 rồi bấm OK để điền vào ô Style.</div>
+    <div id="saved_styles_list" class="saved-styles-list"></div>
+    <div class="modal-actions">
+      <button type="button" id="saved_styles_delete" class="inline-btn" disabled>Delete</button>
+      <div style="flex:1"></div>
+      <button type="button" id="saved_styles_close" class="inline-btn">Close</button>
+      <button type="button" id="saved_styles_ok" class="inline-btn primary" disabled>OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const form = document.getElementById('form');
+const statusEl = document.getElementById('status');
+const submitBtn = document.getElementById('submit_btn');
+const resultEl = document.getElementById('result');
+const player = document.getElementById('player');
+const downloadLink = document.getElementById('download_link');
+const metasEl = document.getElementById('metas');
+
+const coverStrength = document.getElementById('cover_strength');
+const coverStrengthVal = document.getElementById('cover_strength_val');
+coverStrength.addEventListener('input', () => { coverStrengthVal.textContent = coverStrength.value; });
+
+const bpmSlider = document.getElementById('bpm');
+const bpmVal = document.getElementById('bpm_val');
+const bpmAuto = document.getElementById('bpm_auto');
+bpmSlider.addEventListener('input', () => { bpmVal.textContent = bpmSlider.value + ' BPM'; });
+bpmAuto.addEventListener('change', () => { bpmSlider.disabled = bpmAuto.checked; });
+
+const inferenceSteps = document.getElementById('inference_steps');
+const inferenceStepsVal = document.getElementById('inference_steps_val');
+inferenceSteps.addEventListener('input', () => { inferenceStepsVal.textContent = inferenceSteps.value; });
+
+const numVariations = document.getElementById('num_variations');
+const numVariationsVal = document.getElementById('num_variations_val');
+numVariations.addEventListener('input', () => { numVariationsVal.textContent = numVariations.value; });
+
+const vocalGender = document.getElementById('vocal_gender');
+const VOCAL_GENDER_PHRASES = {
+  male: 'a clear, powerful male vocal',
+  female: 'a soft, expressive female vocal',
+  duet: 'alternating male and female vocals in a duet',
+};
+
+// --- Tabs ---
+const tabButtons = document.querySelectorAll('.tab-btn');
+const tabPanels = { cover: document.getElementById('tab-cover'), create: document.getElementById('tab-create') };
+const pageSubtitle = document.getElementById('page_subtitle');
+const TAB_SUBTITLES = {
+  cover: 'Tải bài hát lên, xác nhận lời gốc, mô tả style bạn muốn, AI tạo bản cover mới.',
+  create: 'Gõ prompt mô tả nhạc và (không bắt buộc) lời bài hát - AI tạo bài hát hoàn toàn mới, không cần file gốc. Để trống khung lời = tạo nhạc không lời.',
+};
+tabButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabButtons.forEach(b => b.classList.toggle('active', b === btn));
+    Object.entries(tabPanels).forEach(([key, el]) => el.classList.toggle('active', key === btn.dataset.tab));
+    pageSubtitle.textContent = TAB_SUBTITLES[btn.dataset.tab] || '';
+  });
+});
+
+// --- Create tab sliders ---
+const createDuration = document.getElementById('create_duration');
+const createDurationVal = document.getElementById('create_duration_val');
+createDuration.addEventListener('input', () => { createDurationVal.textContent = createDuration.value + 's'; });
+
+const createBpmSlider = document.getElementById('create_bpm');
+const createBpmVal = document.getElementById('create_bpm_val');
+const createBpmAuto = document.getElementById('create_bpm_auto');
+createBpmSlider.addEventListener('input', () => { createBpmVal.textContent = createBpmSlider.value + ' BPM'; });
+createBpmAuto.addEventListener('change', () => { createBpmSlider.disabled = createBpmAuto.checked; });
+
+const createInferenceSteps = document.getElementById('create_inference_steps');
+const createInferenceStepsVal = document.getElementById('create_inference_steps_val');
+createInferenceSteps.addEventListener('input', () => { createInferenceStepsVal.textContent = createInferenceSteps.value; });
+
+const createNumVariations = document.getElementById('create_num_variations');
+const createNumVariationsVal = document.getElementById('create_num_variations_val');
+createNumVariations.addEventListener('input', () => { createNumVariationsVal.textContent = createNumVariations.value; });
+
+const melodyLock = document.getElementById('melody_lock');
+const melodyTrackRow = document.getElementById('melody_track_row');
+const melodyMethod = document.getElementById('melody_method');
+const melodyMethodHint = document.getElementById('melody_method_hint');
+const MELODY_METHOD_HINTS = {
+  mix: '3 bước qua model Base + Turbo: Extract track đã chọn (giữ nguyên, 64 bước chất lượng cao) → sinh nhạc nền mới (Turbo, LM-enhanced) → mix lại. Giữ đúng giọng gốc, tự do đổi nhạc cụ/style. Nhạc nền sinh độc lập với lời hát nên có thể lệch nhịp trên bài dài - nếu gặp vậy, thử đổi "Cách giữ giai điệu" sang Complete AI.',
+  complete: '2 bước, chỉ qua model Base: Extract track đã chọn → dùng chính track đó làm điều kiện để model sinh LẠI toàn bộ bài hát (nhạc + lời) trong 1 lần duy nhất, bám sát giai điệu/nhịp hơn cách Tách+Mix. Đổi lại: giọng hát KHÔNG còn là giọng gốc (do AI hát lại) - thử nghiệm.',
+};
+function updateMelodyMethodHint() {
+  melodyMethodHint.textContent = MELODY_METHOD_HINTS[melodyMethod.value] || MELODY_METHOD_HINTS.mix;
+}
+const coverStrengthField = document.getElementById('cover_strength_field');
+function syncMelodyLockVisibility() {
+  melodyTrackRow.style.display = melodyLock.checked ? 'flex' : 'none';
+  // audio_cover_strength only applies to plain cover mode - neither melody_lock method
+  // (mix or complete) sends it to the engine at all, so showing it while melody_lock is
+  // checked just invites dragging a slider that silently does nothing.
+  coverStrengthField.style.display = melodyLock.checked ? 'none' : '';
+}
+melodyLock.addEventListener('change', () => {
+  syncMelodyLockVisibility();
+  updateModelInfo();
+});
+melodyMethod.addEventListener('change', () => {
+  updateMelodyMethodHint();
+  updateModelInfo();
+});
+syncMelodyLockVisibility();
+updateMelodyMethodHint();
+
+// --- Model info line - shows which real engine model(s) are actually running the job ---
+const modelInfoEl = document.getElementById('model_info');
+const submitBtnEl = document.getElementById('submit_btn');
+let engineModels = { turbo: 'acestep-v15-xl-turbo', base: 'acestep-v15-base' };
+
+function updateModelInfo() {
+  // The button used to always say "Tạo bản cover" no matter which of these 3 completely
+  // different pipelines (task_type=cover vs the 2 melody_lock methods) was actually about
+  // to run - that hid an important distinction: plain cover mode is capped at 90s of
+  // source audio on this GPU tier (see _check_cover_duration in backend/app.py), the other
+  // two are not. Labeling the button by the active mode makes that visible up front
+  // instead of only showing up as a confusing error after the fact.
+  if (!melodyLock.checked) {
+    modelInfoEl.textContent = `Model: ${engineModels.turbo} (cover)`;
+    submitBtnEl.textContent = 'Tạo bản cover (đổi style/giọng tự do, bài ≤90s)';
+  } else if (melodyMethod.value === 'complete') {
+    modelInfoEl.textContent = `Model: ${engineModels.base} (tách track + tạo lại toàn bộ bài)`;
+    submitBtnEl.textContent = 'Tạo bản Complete AI (giữ giai điệu, đổi giọng)';
+  } else {
+    modelInfoEl.textContent = `Model: ${engineModels.turbo} (nhạc nền) + ${engineModels.base} (tách track, giữ nguyên giọng)`;
+    submitBtnEl.textContent = 'Tạo bản Tách + Mix (giữ nguyên giọng gốc)';
+  }
+}
+
+async function loadModelInfo() {
+  try {
+    const resp = await fetch('/api/health');
+    const data = await resp.json();
+    if (data.engine_turbo?.data?.loaded_model) engineModels.turbo = data.engine_turbo.data.loaded_model;
+    if (data.engine_base?.data?.loaded_model) engineModels.base = data.engine_base.data.loaded_model;
+  } catch (err) {
+    // Non-critical - keep the default names shown.
+  }
+  updateModelInfo();
+}
+loadModelInfo();
+
+// --- Header progress bar ---
+const headerProgress = document.getElementById('header_progress');
+const headerProgressFill = document.getElementById('header_progress_fill');
+const headerProgressPct = document.getElementById('header_progress_pct');
+const headerProgressStage = document.getElementById('header_progress_stage');
+
+function showHeaderProgress(progress, stage) {
+  headerProgress.style.display = 'flex';
+  const pct = Math.round((progress || 0) * 100);
+  headerProgressFill.style.width = pct + '%';
+  headerProgressPct.textContent = pct + '%';
+  headerProgressStage.textContent = stage || '';
+}
+function hideHeaderProgress() {
+  headerProgress.style.display = 'none';
+}
+
+// --- "Nhờ Gemini viết prompt" - copies a ready-made meta-prompt so the user can paste
+// it into Gemini/ChatGPT and paste the answer back, without wiring an API key into
+// this app. The template mirrors ACE-Step's own training-caption style (see the repo's
+// examples/text2music/*.json), so whatever comes back should already match the format
+// the model responds best to. ---
+function wireGeminiPromptButton(btn, status, styleInput) {
+  btn.addEventListener('click', async () => {
+    const seed = styleInput.value.trim();
+    const idea = seed
+      ? `Ý tưởng/từ khoá của tôi: "${seed}" (kể cả khi đây là 1 khái niệm không thuộc thuật ngữ âm nhạc, ví dụ tên game/phim/thương hiệu - hãy dịch nó sang không khí, nhạc cụ, mood âm nhạc tương ứng).`
+      : `Tôi chưa có ý tưởng cụ thể - hãy tự sáng tạo 1 thể loại/không khí bất kỳ, càng độc đáo càng tốt (đừng chọn thể loại quá phổ biến).`;
+
+    const template = `Viết giúp tôi 1 đoạn "music caption" bằng tiếng Anh để đưa vào 1 model tạo nhạc AI (ACE-Step). Yêu cầu:
+- Chỉ trả về đúng đoạn caption, không giải thích, không markdown, không liệt kê.
+- Độ dài 2-4 câu văn liền mạch (không phải danh sách từ khoá).
+- Mô tả rõ: thể loại (genre), nhạc cụ chính, không khí/mood, tiết tấu (tempo feel), và nếu phù hợp thì đặc điểm giọng hát (nam/nữ/song ca, chất giọng).
+- Gợi ý luôn 1 arc năng lượng theo thời gian (vd: mở đầu nhẹ nhàng, dần build lên, bùng nổ ở đoạn chorus/climax) - đừng mô tả 1 trạng thái tĩnh xuyên suốt cả bài, vì caption và cấu trúc bài hát cần nhất quán với nhau.
+- Văn phong ví dụ mẫu (bám sát giọng văn này): "An explosive, high-energy pop-rock track with a strong anime theme song feel. The song kicks off with a catchy, synthesized brass fanfare over a driving rock beat with punchy drums and a solid bassline. A powerful, clear male vocal enters with a theatrical and energetic delivery, soaring through the verses and hitting powerful high notes in the chorus."
+
+${idea}`;
+
+    try {
+      await navigator.clipboard.writeText(template);
+      status.className = 'hint ok';
+      status.innerHTML = 'Đã copy prompt mẫu vào clipboard. Mở <a href="https://gemini.google.com/app" target="_blank" style="color:var(--accent)">Gemini</a>, dán vào, rồi dán câu trả lời của Gemini ngược lại vào ô Style ở trên.';
+    } catch (err) {
+      status.className = 'hint error';
+      status.textContent = 'Không copy được vào clipboard (trình duyệt chặn). Nội dung prompt mẫu:\n\n' + template;
+    }
+  });
+}
+wireGeminiPromptButton(document.getElementById('gemini_btn'), document.getElementById('gemini_status'), document.getElementById('style_prompt'));
+wireGeminiPromptButton(document.getElementById('create_gemini_btn'), document.getElementById('create_gemini_status'), document.getElementById('create_style_prompt'));
+
+// --- Saved style picker - browse/reuse styles Gemini has previously optimized (auto-saved
+// server-side every time /api/gemini/enhance succeeds, see backend/app.py _save_style) ---
+const savedStylesBtn = document.getElementById('saved_styles_btn');
+const savedStylesOverlay = document.getElementById('saved_styles_overlay');
+const savedStylesList = document.getElementById('saved_styles_list');
+const savedStylesOkBtn = document.getElementById('saved_styles_ok');
+const savedStylesDeleteBtn = document.getElementById('saved_styles_delete');
+const savedStylesCloseBtn = document.getElementById('saved_styles_close');
+let savedStylesCache = [];
+let selectedSavedStyleId = null;
+let savedStylesTargetInput = document.getElementById('style_prompt');
+
+function renderSavedStyles() {
+  selectedSavedStyleId = null;
+  savedStylesOkBtn.disabled = true;
+  savedStylesDeleteBtn.disabled = true;
+  if (savedStylesCache.length === 0) {
+    savedStylesList.innerHTML = '<div class="saved-styles-empty">Chưa có style nào được Gemini tối ưu.</div>';
+    return;
+  }
+  savedStylesList.innerHTML = '';
+  for (const s of savedStylesCache) {
+    const row = document.createElement('label');
+    row.className = 'saved-style-row';
+    row.dataset.id = s.id;
+    row.innerHTML = `<input type="radio" name="saved_style_pick" value="${s.id}"><span class="text"></span>`;
+    row.querySelector('.text').textContent = s.text;
+    row.addEventListener('click', () => {
+      selectedSavedStyleId = s.id;
+      savedStylesOkBtn.disabled = false;
+      savedStylesDeleteBtn.disabled = false;
+      savedStylesList.querySelectorAll('.saved-style-row').forEach(r => r.classList.toggle('selected', r.dataset.id === s.id));
+    });
+    savedStylesList.appendChild(row);
+  }
+}
+
+async function openSavedStyles(targetInput) {
+  savedStylesTargetInput = targetInput;
+  savedStylesList.innerHTML = '<div class="saved-styles-empty">Đang tải...</div>';
+  savedStylesOverlay.style.display = 'flex';
+  try {
+    const resp = await fetch('/api/styles');
+    savedStylesCache = await resp.json();
+  } catch (err) {
+    savedStylesCache = [];
+  }
+  renderSavedStyles();
+}
+
+savedStylesBtn.addEventListener('click', () => openSavedStyles(document.getElementById('style_prompt')));
+document.getElementById('create_saved_styles_btn').addEventListener('click', () => openSavedStyles(document.getElementById('create_style_prompt')));
+savedStylesCloseBtn.addEventListener('click', () => { savedStylesOverlay.style.display = 'none'; });
+savedStylesOverlay.addEventListener('click', (e) => { if (e.target === savedStylesOverlay) savedStylesOverlay.style.display = 'none'; });
+
+savedStylesOkBtn.addEventListener('click', () => {
+  const picked = savedStylesCache.find(s => s.id === selectedSavedStyleId);
+  if (picked) savedStylesTargetInput.value = picked.text;
+  savedStylesOverlay.style.display = 'none';
+});
+
+savedStylesDeleteBtn.addEventListener('click', async () => {
+  if (!selectedSavedStyleId) return;
+  try {
+    await fetch(`/api/styles/${selectedSavedStyleId}`, { method: 'DELETE' });
+  } catch (err) {
+    // best-effort - re-fetch below will reflect actual server state either way
+  }
+  savedStylesCache = savedStylesCache.filter(s => s.id !== selectedSavedStyleId);
+  renderSavedStyles();
+});
+
+const lyricsField = document.getElementById('lyrics');
+const lyricsStatus = document.getElementById('lyrics_status');
+const songInput = document.getElementById('song');
+
+// --- Lyrics lookup (LRCLIB - real published lyrics, most accurate) ---
+const lyricsSearchBtn = document.getElementById('lyrics_search_btn');
+const lyricsTitle = document.getElementById('lyrics_title');
+const lyricsArtist = document.getElementById('lyrics_artist');
+const lyricsCandidates = document.getElementById('lyrics_candidates');
+
+async function runLyricsSearch({ auto = false } = {}) {
+  const title = lyricsTitle.value.trim();
+  if (!title) {
+    lyricsStatus.className = 'hint error';
+    lyricsStatus.textContent = 'Nhập tên bài hát trước.';
+    lyricsTitle.focus();
+    return;
+  }
+  lyricsSearchBtn.disabled = true;
+  lyricsStatus.className = 'hint';
+  lyricsStatus.innerHTML = `<span class="spinner"></span>${auto ? 'Đã đoán tên bài từ tên file, đang tự tìm lời...' : 'Đang tìm lời...'}`;
+  lyricsCandidates.style.display = 'none';
+  lyricsCandidates.innerHTML = '';
+
+  try {
+    const params = new URLSearchParams({ title, artist: lyricsArtist.value.trim() });
+    const resp = await fetch('/api/lyrics/search?' + params.toString());
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Có lỗi xảy ra');
+    if (!data.length) {
+      lyricsStatus.className = 'hint error';
+      lyricsStatus.textContent = (auto ? 'Đoán tên từ file nhưng không tìm thấy lời khớp - kiểm tra lại tên bài/ca sĩ, hoặc thử ' : 'Không tìm thấy lời khớp - thử ') + '"Nghe file tự đoán lời" hoặc tự dán lời.';
+      return;
+    }
+    data.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'lyrics-candidate';
+      const label = item.instrumental ? '(instrumental)' : (item.lyrics.slice(0, 40).replace(/\n/g, ' ') + '...');
+      row.innerHTML = `<div class="info"><b>${item.track_name}</b> <span>- ${item.artist_name || '?'} | ${label}</span></div>`;
+      const pickBtn = document.createElement('button');
+      pickBtn.type = 'button';
+      pickBtn.className = 'inline-btn';
+      pickBtn.textContent = 'Dùng';
+      pickBtn.style.flexShrink = '0';
+      pickBtn.addEventListener('click', () => {
+        lyricsField.value = item.instrumental ? '' : item.lyrics;
+        lyricsStatus.className = 'hint ok';
+        lyricsStatus.textContent = `Đã điền lời từ "${item.track_name} - ${item.artist_name || '?'}". Kiểm tra lại trước khi tạo cover.`;
+      });
+      row.appendChild(pickBtn);
+      lyricsCandidates.appendChild(row);
+    });
+    lyricsCandidates.style.display = 'flex';
+    lyricsStatus.className = 'hint';
+    lyricsStatus.textContent = `Tìm thấy ${data.length} kết quả - chọn bản đúng ở trên.`;
+  } catch (err) {
+    lyricsStatus.className = 'hint error';
+    lyricsStatus.textContent = 'Lỗi: ' + err.message;
+  } finally {
+    lyricsSearchBtn.disabled = false;
+  }
+}
+
+lyricsSearchBtn.addEventListener('click', () => runLyricsSearch());
+
+// --- Auto-fill Title/Artist from the uploaded file's name, and auto-search if it worked.
+// Filenames ripped from YouTube etc are usually "Title - Artist" or "Title   Artist" (extra
+// spaces instead of a dash), often with noise like "(Official MV)", "(Lofi ver)", "(1)".
+// A bare filename with no real info (e.g. "1.mp3") yields nothing, so the user has to type
+// it in themselves - the existing empty-title check on the search button already enforces
+// that; this just skips the manual typing whenever the filename actually has something to work with. ---
+function parseSongInfoFromFilename(filename) {
+  let name = filename.replace(/\.[^/.]+$/, '');
+  name = name.replace(/[\(\[][^\)\]]*\)|\[[^\)\]]*\]/g, (m) => {
+    const noiseWords = /official|mv|video|lyrics?|audio|cover|remix|lofi|karaoke|live|acoustic|ver(sion)?|\d+/i;
+    return noiseWords.test(m) ? ' ' : m;
+  });
+  name = name.replace(/\b(official\s*(music\s*)?video|official\s*mv|lyrics?\s*video)\b/gi, ' ');
+  name = name.replace(/[_|｜]/g, ' - ');
+  name = name.replace(/ {2,}/, ' - ');
+  name = name.trim();
+
+  const parts = name.split(/\s+-\s+/).map(s => s.trim()).filter(Boolean);
+  const isMeaningful = (s) => s && s.length >= 2 && !/^\d+$/.test(s);
+
+  if (parts.length >= 2 && isMeaningful(parts[0])) {
+    return { title: parts[0], artist: parts[1] };
+  }
+  if (parts.length === 1 && isMeaningful(parts[0])) {
+    return { title: parts[0], artist: '' };
+  }
+  return { title: '', artist: '' };
+}
+
+const songFilenameDisplay = document.getElementById('song_filename_display');
+
+songInput.addEventListener('change', () => {
+  const file = songInput.files[0];
+  if (!file) return;
+  songFilenameDisplay.textContent = file.name;
+  songFilenameDisplay.classList.add('chosen');
+  const { title, artist } = parseSongInfoFromFilename(file.name);
+  if (title) {
+    lyricsTitle.value = title;
+    lyricsArtist.value = artist;
+    lyricsTitle.removeAttribute('required');
+    runLyricsSearch({ auto: true });
+  } else {
+    // Filename carries no usable info (e.g. "1.mp3") - force the user to type it in.
+    lyricsTitle.value = '';
+    lyricsArtist.value = '';
+    lyricsTitle.setAttribute('required', 'required');
+    lyricsTitle.placeholder = 'Không đoán được tên bài từ tên file - nhập tay để tìm lời';
+    lyricsStatus.className = 'hint error';
+    lyricsStatus.textContent = 'Không đoán được tên bài/ca sĩ từ tên file - hãy nhập tay ở trên rồi bấm "Tìm lời".';
+  }
+});
+
+// --- Lyrics transcription fallback (Whisper, listens to the uploaded file) ---
+const transcribeBtn = document.getElementById('transcribe_btn');
+transcribeBtn.addEventListener('click', async () => {
+  const file = songInput.files[0];
+  if (!file) {
+    lyricsStatus.className = 'hint error';
+    lyricsStatus.textContent = 'Hãy chọn file bài hát trước.';
+    return;
+  }
+  transcribeBtn.disabled = true;
+  lyricsStatus.className = 'hint';
+  lyricsStatus.innerHTML = '<span class="spinner"></span>Đang nghe và đoán lời... (chỉ mang tính tham khảo, lần đầu chạy sẽ tải model)';
+
+  const formData = new FormData();
+  formData.append('song', file);
+  formData.append('language', document.getElementById('vocal_language').value);
+
+  try {
+    const resp = await fetch('/api/transcribe', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Có lỗi xảy ra');
+    lyricsField.value = data.lyrics || '';
+    lyricsStatus.className = 'hint ok';
+    lyricsStatus.textContent = data.lyrics
+      ? `Đã đoán lời xong (ngôn ngữ phát hiện: ${data.detected_language}). Đây là ước lượng từ audio, không đảm bảo chính xác 100% - nên đối chiếu lại.`
+      : 'Không phát hiện được lời hát rõ ràng (có thể vocal không rõ hoặc bài hát là instrumental).';
+  } catch (err) {
+    lyricsStatus.className = 'hint error';
+    lyricsStatus.textContent = 'Lỗi: ' + err.message;
+  } finally {
+    transcribeBtn.disabled = false;
+  }
+});
+
+// --- Local, AI-free structure-tag insertion (repetition detection) - the reliable
+// fallback for when Gemini/GPT refuse to touch copyrighted song lyrics, even just to
+// insert tags. Nothing is sent anywhere, so it can never be refused. ---
+const autotagBtn = document.getElementById('autotag_btn');
+autotagBtn.addEventListener('click', async () => {
+  const current = lyricsField.value.trim();
+  if (!current) {
+    lyricsStatus.className = 'hint error';
+    lyricsStatus.textContent = 'Chưa có lời để thêm tag - dán lời vào trước.';
+    return;
+  }
+  autotagBtn.disabled = true;
+  lyricsStatus.className = 'hint';
+  lyricsStatus.innerHTML = '<span class="spinner"></span>Đang phân tích đoạn lặp lại...';
+  try {
+    const params = new URLSearchParams({ lyrics: current });
+    const resp = await fetch('/api/lyrics/auto_tag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Có lỗi xảy ra');
+    lyricsField.value = data.lyrics;
+    lyricsStatus.className = 'hint ok';
+    lyricsStatus.textContent = 'Đã tự thêm tag dựa trên đoạn lặp lại (không qua AI). Kiểm tra lại - thuật toán không phân biệt được Bridge/Pre-Chorus, chỉ có Verse/Chorus.';
+  } catch (err) {
+    lyricsStatus.className = 'hint error';
+    lyricsStatus.textContent = 'Lỗi: ' + err.message;
+  } finally {
+    autotagBtn.disabled = false;
+  }
+});
+
+// --- History panel ---
+const historyList = document.getElementById('history_list');
+
+function renderHistoryItem(item) {
+  const div = document.createElement('div');
+  div.className = 'history-item';
+  const date = new Date(item.created_at * 1000).toLocaleString('vi-VN');
+  div.innerHTML = `
+    <div class="history-item-head">
+      <div class="title">${(item.style_prompt || '').slice(0, 60)}</div>
+      <div class="history-menu">
+        <button type="button" class="history-menu-btn" title="Tuỳ chọn">&#8942;</button>
+        <div class="history-menu-dropdown">
+          <button type="button" class="history-delete-btn">Xoá</button>
+        </div>
+      </div>
+    </div>
+    <div class="meta">${item.source_filename ? item.source_filename + ' · ' : (item.mode === 'create' ? 'Create · ' : '')}${date}</div>
+    <audio controls src="${item.audio_url}"></audio>
+  `;
+
+  const menuBtn = div.querySelector('.history-menu-btn');
+  const dropdown = div.querySelector('.history-menu-dropdown');
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.querySelectorAll('.history-menu-dropdown.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+    dropdown.classList.toggle('open');
+  });
+
+  div.querySelector('.history-delete-btn').addEventListener('click', async () => {
+    if (!confirm('Xoá hẳn bản cover này khỏi ổ đĩa? Không thể hoàn tác.')) return;
+    try {
+      const resp = await fetch(`/api/history/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.detail || 'Xoá thất bại');
+      }
+      div.remove();
+      if (!historyList.children.length) {
+        historyList.innerHTML = '<div class="history-empty">Chưa có bản cover nào.</div>';
+      }
+    } catch (err) {
+      alert('Lỗi: ' + err.message);
+    }
+  });
+
+  return div;
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.history-menu-dropdown.open').forEach(d => d.classList.remove('open'));
+});
+
+async function loadHistory() {
+  try {
+    const resp = await fetch('/api/history');
+    const data = await resp.json();
+    if (!Array.isArray(data) || !data.length) return;
+    historyList.innerHTML = '';
+    data.forEach(item => historyList.appendChild(renderHistoryItem(item)));
+  } catch (err) {
+    // Non-critical - leave the empty-state message in place.
+  }
+}
+loadHistory();
+
+// --- Main generate flow (submit -> job_id -> poll /api/generate/status) ---
+function pollJob(jobId) {
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(async () => {
+      try {
+        const resp = await fetch(`/api/generate/status/${jobId}`);
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Có lỗi xảy ra');
+
+        showHeaderProgress(data.progress, data.stage);
+        statusEl.className = '';
+        statusEl.innerHTML = `<span class="spinner"></span>${data.stage || 'Đang xử lý...'} (${Math.round((data.progress || 0) * 100)}%)`;
+
+        if (data.status === 'succeeded') {
+          clearInterval(interval);
+          resolve(data.result);
+        } else if (data.status === 'failed') {
+          clearInterval(interval);
+          reject(new Error(data.error || 'Generation failed'));
+        }
+      } catch (err) {
+        clearInterval(interval);
+        reject(err);
+      }
+    }, 1500);
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  resultEl.style.display = 'none';
+  submitBtn.disabled = true;
+
+  const autoGemini = document.getElementById('auto_gemini');
+  if (autoGemini.checked) {
+    statusEl.className = '';
+    statusEl.innerHTML = '<span class="spinner"></span>Đang nhờ Gemini chuẩn hoá Style...';
+    showHeaderProgress(0, 'Đang hỏi Gemini...');
+    try {
+      const geminiParams = new URLSearchParams({
+        style_prompt: document.getElementById('style_prompt').value.trim(),
+      });
+      const geminiResp = await fetch('/api/gemini/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: geminiParams.toString(),
+      });
+      const geminiData = await geminiResp.json();
+      if (!geminiResp.ok) throw new Error(geminiData.detail || 'Gemini enhance thất bại');
+      document.getElementById('style_prompt').value = geminiData.style_prompt;
+      statusEl.className = 'ok';
+      statusEl.textContent = 'Gemini đã chuẩn hoá xong - đang tạo bản cover...';
+    } catch (err) {
+      statusEl.className = 'error';
+      statusEl.textContent = 'Lỗi Gemini (' + err.message + ') - tiếp tục tạo với nội dung hiện có trong 2 khung.';
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+
+  statusEl.className = '';
+  statusEl.innerHTML = '<span class="spinner"></span>Đang gửi job...';
+  showHeaderProgress(0, 'Đang gửi job...');
+
+  const formData = new FormData(form);
+  formData.set('bpm', bpmAuto.checked ? '' : bpmSlider.value);
+  formData.set('melody_lock', melodyLock.checked ? 'true' : 'false');
+  // melody_track/melody_method are plain <select> with no name= attribute (not form
+  // fields FormData(form) picks up on its own) - set explicitly.
+  formData.set('melody_track', document.getElementById('melody_track').value);
+  formData.set('melody_method', melodyMethod.value);
+  const genderPhrase = VOCAL_GENDER_PHRASES[vocalGender.value];
+  if (genderPhrase) {
+    formData.set('style_prompt', formData.get('style_prompt').trim() + `. The vocals are ${genderPhrase}.`);
+  }
+
+  try {
+    const resp = await fetch('/api/generate', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Có lỗi xảy ra');
+
+    const result = await pollJob(data.job_id);
+
+    statusEl.className = 'ok';
+    statusEl.textContent = 'Xong!';
+    player.src = result.audio_url;
+    downloadLink.href = result.audio_url;
+
+    const variationsList = document.getElementById('variations_list');
+    if (result.variations && result.variations.length > 1) {
+      variationsList.innerHTML = '<div class="hint" style="margin-bottom:8px">Nghe từng bản và chọn bản bạn thích nhất:</div>';
+      result.variations.forEach((v, i) => {
+        const row = document.createElement('div');
+        row.className = 'variation-row';
+        row.innerHTML = `
+          <div class="variation-label">Bản ${i + 1}${i === 0 ? ' (đang phát ở trên)' : ''}</div>
+          <audio controls src="${v.audio_url}"></audio>
+        `;
+        variationsList.appendChild(row);
+      });
+      variationsList.style.display = 'block';
+    } else {
+      variationsList.style.display = 'none';
+    }
+
+    const modeLabel = { melody_lock: 'Melody-lock (Tách+Mix)', melody_complete: 'Melody-lock (Complete AI)' }[result.mode];
+    if (result.metas) {
+      metasEl.textContent = `BPM: ${result.metas.bpm ?? '-'} | Key: ${result.metas.keyscale ?? '-'} | Nhịp: ${result.metas.timesignature ?? '-'} | Thời lượng: ${result.metas.duration ?? '-'}s${modeLabel ? ' | ' + modeLabel + ': ' + result.melody_track : ''}`;
+    } else {
+      metasEl.textContent = '';
+    }
+    document.getElementById('debug_vocal_field').style.display = result.vocal_track_url ? 'block' : 'none';
+    document.getElementById('debug_instrumental_extract_field').style.display = result.instrumental_extract_url ? 'block' : 'none';
+    document.getElementById('debug_instrumental_field').style.display = result.instrumental_track_url ? 'block' : 'none';
+    if (result.vocal_track_url || result.instrumental_extract_url || result.instrumental_track_url) {
+      document.getElementById('debug_vocal_player').src = result.vocal_track_url || '';
+      document.getElementById('debug_instrumental_extract_player').src = result.instrumental_extract_url || '';
+      document.getElementById('debug_instrumental_player').src = result.instrumental_track_url || '';
+      document.getElementById('debug_tracks').style.display = 'block';
+    } else {
+      document.getElementById('debug_tracks').style.display = 'none';
+    }
+    resultEl.style.display = 'block';
+    loadHistory();
+  } catch (err) {
+    statusEl.className = 'error';
+    statusEl.textContent = 'Lỗi: ' + err.message;
+  } finally {
+    submitBtn.disabled = false;
+    hideHeaderProgress();
+  }
+});
+
+// --- Create tab: prompt (+ optional lyrics) -> brand new song, no source file needed ---
+const createForm = document.getElementById('create_form');
+const createStatusEl = document.getElementById('create_status');
+const createSubmitBtn = document.getElementById('create_submit_btn');
+const createResultEl = document.getElementById('create_result');
+const createPlayer = document.getElementById('create_player');
+const createDownloadLink = document.getElementById('create_download_link');
+const createMetasEl = document.getElementById('create_metas');
+
+createForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  createResultEl.style.display = 'none';
+  createSubmitBtn.disabled = true;
+
+  let stylePrompt = document.getElementById('create_style_prompt').value.trim();
+  const genderPhrase = VOCAL_GENDER_PHRASES[document.getElementById('create_vocal_gender').value];
+  if (genderPhrase) stylePrompt += `. The vocals are ${genderPhrase}.`;
+
+  const formData = new FormData();
+  formData.set('style_prompt', stylePrompt);
+  formData.set('lyrics', document.getElementById('create_lyrics').value.trim());
+  formData.set('vocal_language', document.getElementById('create_vocal_language').value);
+  formData.set('bpm', createBpmAuto.checked ? '' : createBpmSlider.value);
+  formData.set('inference_steps', createInferenceSteps.value);
+  formData.set('num_variations', createNumVariations.value);
+  formData.set('audio_format', document.getElementById('create_audio_format').value);
+  formData.set('duration', createDuration.value);
+
+  createStatusEl.className = '';
+  createStatusEl.innerHTML = '<span class="spinner"></span>Đang gửi job...';
+  showHeaderProgress(0, 'Đang gửi job...');
+
+  try {
+    const resp = await fetch('/api/generate/create', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Có lỗi xảy ra');
+
+    const result = await pollJob(data.job_id);
+
+    createStatusEl.className = 'ok';
+    createStatusEl.textContent = 'Xong!';
+    createPlayer.src = result.audio_url;
+    createDownloadLink.href = result.audio_url;
+
+    const createVariationsList = document.getElementById('create_variations_list');
+    if (result.variations && result.variations.length > 1) {
+      createVariationsList.innerHTML = '<div class="hint" style="margin-bottom:8px">Nghe từng bản và chọn bản bạn thích nhất:</div>';
+      result.variations.forEach((v, i) => {
+        const row = document.createElement('div');
+        row.className = 'variation-row';
+        row.innerHTML = `
+          <div class="variation-label">Bản ${i + 1}${i === 0 ? ' (đang phát ở trên)' : ''}</div>
+          <audio controls src="${v.audio_url}"></audio>
+        `;
+        createVariationsList.appendChild(row);
+      });
+      createVariationsList.style.display = 'block';
+    } else {
+      createVariationsList.style.display = 'none';
+    }
+
+    if (result.metas) {
+      createMetasEl.textContent = `BPM: ${result.metas.bpm ?? '-'} | Key: ${result.metas.keyscale ?? '-'} | Nhịp: ${result.metas.timesignature ?? '-'} | Thời lượng: ${result.metas.duration ?? '-'}s`;
+    } else {
+      createMetasEl.textContent = '';
+    }
+    createResultEl.style.display = 'block';
+    loadHistory();
+  } catch (err) {
+    createStatusEl.className = 'error';
+    createStatusEl.textContent = 'Lỗi: ' + err.message;
+  } finally {
+    createSubmitBtn.disabled = false;
+    hideHeaderProgress();
+  }
+});
+</script>
+</body>
+</html>

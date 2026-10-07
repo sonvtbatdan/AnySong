@@ -1,0 +1,26 @@
+# Engine is a separate large external project (cloned by scripts/setup_engine.ps1), not vendored in this repo
+engine/
+
+# Generated audio output
+outputs/
+!outputs/.gitkeep
+
+# Runtime logs from app_launcher.py (engine/gemini_service/backend stdout+stderr)
+logs/
+
+# Python
+backend/.venv/
+gemini_service/.venv/
+__pycache__/
+*.pyc
+
+# Google login session for gemini_service - never commit this, it's live auth cookies
+gemini_service/.webview_data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup cục bộ
+.backup_*/
+.webview_data/

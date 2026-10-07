@@ -1,0 +1,4 @@
+pywebview>=6.0.0
+PySide6
+qtpy
+Flask
