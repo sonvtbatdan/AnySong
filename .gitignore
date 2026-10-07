@@ -24,3 +24,6 @@ Thumbs.db
 # Backup cục bộ
 .backup_*/
 .webview_data/
+
+# Release artifacts
+dist/

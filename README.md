@@ -1,112 +1,141 @@
 # AnySong
 
-Tải 1 bài hát lên, mô tả style bạn muốn, AI tạo ra bản cover theo style đó -
-hoặc giữ nguyên giọng hát gốc, chỉ đổi nhạc nền.
+Ứng dụng desktop chạy hoàn toàn trên máy bạn: tải một bài hát lên, mô tả phong cách mong muốn, AI sẽ tạo bản cover theo phong cách đó. Hoặc giữ nguyên giọng hát gốc và chỉ thay nhạc nền. Cũng có thể tạo nhạc mới từ một câu mô tả.
+
+Mô hình nhạc là [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5), mã nguồn mở, chạy local, miễn phí, hỗ trợ tiếng Việt tốt trong nhóm open-source hiện tại. Không cần API key, không gửi nhạc của bạn lên bất kỳ máy chủ nào.
+
+## Tính năng
+
+- **Cover**: sinh lại toàn bộ bài (giai điệu, nhạc cụ, giọng hát) theo style bạn mô tả. Nhanh, nhưng giọng hát là giọng AI, không phải giọng gốc.
+- **Giữ nguyên melody gốc**: tách giọng hát gốc, sinh nhạc nền mới khớp độ dài và BPM, rồi mix lại. Giữ đúng giọng ca sĩ. Có chế độ thử nghiệm "Complete AI" bám lời và nhịp hơn nhưng để AI hát lại.
+- **Tạo nhạc mới (tab Create)**: từ prompt (và lời, nếu muốn), không cần file gốc. Thời lượng 10 đến 300 giây.
+- **Tự tìm lời** theo tên file qua LRCLIB. Nếu không có, nhận dạng lời bằng Whisper chạy local.
+- **Tự động nhờ Gemini** (tuỳ chọn): viết caption và chèn tag cấu trúc (`[Verse]`, `[Chorus]`...) vào lời.
+- Chọn giọng nam / nữ / song ca, BPM (tự phát hiện hoặc nhập tay), 1 đến 4 bản sinh để chọn bản đẹp nhất, xuất MP3 / WAV / FLAC.
+- Lịch sử các bản đã tạo, lưu style hay dùng, nghe thử ngay trong app.
+
+## Yêu cầu
+
+| Thành phần | Yêu cầu |
+|---|---|
+| Hệ điều hành | Windows 10/11 (các script cài đặt và khởi động viết cho Windows) |
+| GPU | NVIDIA, khuyến nghị 16 GB VRAM trở lên (xem phần Hiệu năng) |
+| Python | 3.11 hoặc 3.12 |
+| Công cụ | [Git](https://git-scm.com/), [uv](https://docs.astral.sh/uv/), `ffmpeg` và `ffprobe` nằm trong PATH |
+| Ổ cứng | Vài GB cho thư viện và vài chục GB cho model weight |
+
+Cài `uv` nếu chưa có:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+## Cài đặt và chạy
+
+```powershell
+git clone https://github.com/sonvtbatdan/AnySong.git
+cd AnySong
+```
+
+Sau đó nhấp đúp **`run.bat`**. Lần chạy đầu tiên nó tự cài những gì còn thiếu:
+
+1. venv cho backend (vài giây).
+2. Engine ACE-Step 1.5: clone repo vào `engine/` rồi `uv sync`, tải vài GB thư viện (có thể mất vài chục phút).
+3. venv cho `gemini_service` (tuỳ chọn).
+
+Sau đó app mở thành một cửa sổ desktop. Đóng cửa sổ là tắt toàn bộ tiến trình nền.
+
+Model weight (nhiều GB) chỉ được tải vào lần tạo nhạc đầu tiên, không tải lúc cài đặt.
+
+### Cài thủ công từng bước
+
+```powershell
+.\scripts\setup_engine.ps1          # clone + uv sync engine ACE-Step
+.\scripts\setup_backend.ps1         # venv cho backend
+.\scripts\setup_gemini_service.ps1  # (tuỳ chọn) venv cho gemini_service
+.\scripts\start.ps1                 # chạy ở chế độ dev, mở trình duyệt tại http://127.0.0.1:8877
+```
+
+`start.ps1` mở các tiến trình trong cửa sổ PowerShell riêng nên tiện xem log khi gỡ lỗi. `run.bat` dùng `app_launcher.py`, chạy mọi thứ ẩn và ghi log vào `logs/`.
+
+## Cách dùng
+
+1. Chọn file nhạc gốc (wav / mp3 / m4a / flac). Tên bài và ca sĩ được đoán từ tên file để tìm lời, hoặc bạn tự nhập.
+2. Kiểm tra và sửa lời. Để trống nghĩa là hoà tấu không lời.
+3. Mô tả style bằng một câu đầy đủ (thể loại, nhạc cụ, không khí, cách sản xuất). Model được train trên caption dạng câu văn nên mô tả càng rõ càng khớp. Hoặc để trống và bật "Tự động nhờ Gemini".
+4. Chọn chế độ: cover thường (nhanh) hoặc "Giữ nguyên melody gốc" (chậm hơn, giữ giọng gốc).
+5. Bấm "Tạo bản cover" và đợi. Thời gian tuỳ độ dài bài, chế độ và GPU, từ vài chục giây đến vài phút.
+
+Cover thường giới hạn bài gốc tối đa 90 giây. Chế độ giữ melody không bị giới hạn này.
 
 ## Kiến trúc
 
 ```
 AnySong/
-├── backend/          FastAPI - nhận upload + prompt, điều phối các engine, trả audio về
-├── frontend/          1 trang HTML/JS (upload + lyrics + style + player + lịch sử)
-├── engine/            ACE-Step 1.5 (clone riêng, không nằm trong repo này)
-├── gemini_service/    (tuỳ chọn) tự động hoá gemini.google.com để viết/chuẩn hoá prompt
-└── scripts/            script setup + start cho Windows (PowerShell)
+├── app_launcher.py   Chạy mọi thứ ẩn + mở cửa sổ pywebview
+├── run.bat           Điểm vào cho người dùng: tự cài đặt rồi gọi app_launcher
+├── backend/          FastAPI: nhận upload + prompt, điều phối engine, trả audio
+├── frontend/         Một trang HTML/JS (upload, lời, style, player, lịch sử)
+├── gemini_service/   (tuỳ chọn) tự động hoá gemini.google.com để viết prompt
+├── scripts/          Script cài đặt và khởi động cho Windows
+├── engine/           ACE-Step 1.5 (clone về khi cài, không nằm trong repo)
+├── outputs/          Kết quả tạo ra + lịch sử (không nằm trong repo)
+└── logs/             Log của engine/backend khi chạy bằng run.bat (không nằm trong repo)
 ```
 
-`backend/` không có dependency ML nặng nào ngoài Whisper (fallback tách lời) - nó
-là lớp orchestrator: nhận file + prompt từ trình duyệt, gọi sang các service chạy
-riêng (ACE-Step engine(s), gemini_service), poll tới khi xong, trả kết quả về.
+Backend là lớp điều phối nhẹ. Nó chỉ phụ thuộc ML nặng ở Whisper (nhận dạng lời), còn nhạc do engine ACE-Step sinh ra qua HTTP. Các cổng mặc định:
 
-Model nhạc: **ACE-Step 1.5** - mã nguồn mở, chạy local free, hỗ trợ tiếng Việt tốt
-trong nhóm open-source hiện tại.
+| Dịch vụ | Cổng | Ghi chú |
+|---|---|---|
+| AnySong backend + UI | 8877 | |
+| Engine `acestep-v15-xl-turbo` | 8001 | Cover, sinh nhạc nền, tạo nhạc mới |
+| Engine `acestep-v15-base` | 8002 | Chỉ dùng cho bước Extract, backend tự bật khi cần và tắt ngay sau đó |
+| gemini_service | 8004 | Tuỳ chọn |
 
-### 2 engine ACE-Step riêng biệt
+### Vì sao tách 2 engine
 
-Chạy 2 process engine **tách biệt hoàn toàn**, mỗi process chỉ load đúng 1 model
-suốt vòng đời (load 2 model vào cùng 1 process từng gây crash trên Windows):
-- **port 8001** - `acestep-v15-xl-turbo`, LM bật (`thinking`) - dùng cho cover
-  thường + bước sinh nhạc nền của pipeline giữ-melody.
-- **port 8002** - `acestep-v15-base`, LM tắt - chỉ dùng cho bước Extract (tách
-  track) của pipeline giữ-melody, vì Extract chỉ chạy được trên model Base.
+Mỗi tiến trình engine chỉ nạp đúng một model suốt vòng đời, vì nạp hai model vào cùng một tiến trình từng gây crash trên Windows. Bước Extract chỉ chạy được trên model Base. Base và Turbo cùng nằm trong VRAM thì card 16 GB không đủ (hoặc phải offload qua CPU và chậm hơn hàng chục lần), nên engine Base chỉ được bật trong vài giây của bước Extract rồi tắt, để Turbo luôn chạy ở chất lượng đầy đủ.
 
-### 2 chế độ tạo nhạc
+### Pipeline "giữ nguyên melody gốc"
 
-- **Cover** (mặc định): 1 lệnh `task_type=cover` trên model turbo - sinh lại toàn
-  bộ (giai điệu + nhạc cụ + giọng hát) bằng diffusion dựa theo audio gốc. Giọng
-  hát **không được giữ nguyên** vì ACE-Step là model tạo nhạc, không phải
-  voice-cloning.
-- **Giữ nguyên melody gốc**: pipeline 3 bước đảm bảo giữ đúng giọng gốc:
-  1. **Extract** (model Base, 64 bước + ADG) tách track được chọn (thường là
-     vocals) - vẫn là diffusion (không phải tách âm thanh thuần tuý như Demucs)
-     nên chạy ở mức chất lượng cao nhất để giảm sai lệch.
-  2. **Sinh nhạc nền mới** hoàn toàn từ đầu (model Turbo, `task_type=text2music`,
-     LM-enhanced) - khớp độ dài + BPM (tự phát hiện bằng `librosa`) với track đã
-     tách, và dùng lyrics dạng structure-tag (`[Intro]`/`[Build]`/`[Climax]`...)
-     co giãn theo độ dài thay vì 1 tag `[Instrumental]` phẳng, để tránh nhạc chạy
-     đều đều không cấu trúc.
-  3. **ffmpeg mix** 2 track lại thành 1 file.
+1. **Extract** (model Base, 64 bước + ADG): tách track được chọn, thường là vocals. Đây vẫn là diffusion chứ không phải tách âm thanh thuần tuý như Demucs, nên chạy ở mức chất lượng cao nhất để giảm sai lệch. Kết quả được cache theo nội dung file.
+2. **Sinh nhạc nền mới** (model Turbo, `text2music`): khớp độ dài và BPM (phát hiện bằng `librosa`), dùng lời dạng tag cấu trúc (`[Intro]` / `[Build]` / `[Climax]`...) co giãn theo độ dài để nhạc không chạy đều đều.
+3. **ffmpeg mix** hai track thành một file.
 
 ### gemini_service (tuỳ chọn)
 
-Tự động hoá gemini.google.com thật qua 1 cửa sổ pywebview ẩn (đăng nhập bằng tài
-khoản Google của bạn, không qua API/billing) để viết caption + chèn structure tag
-vào lyrics khi bấm "Tạo bản cover" - khỏi phải copy/dán tay qua lại. Xem
-`gemini_service/service.py` để biết chi tiết kỹ thuật (JS injection, WS_EX_LAYERED
-để ẩn cửa sổ). Không bắt buộc - nếu không setup, tắt checkbox "Tự động nhờ
-Gemini" trong UI là dùng app bình thường.
+Điều khiển một cửa sổ pywebview chạy gemini.google.com thật, đăng nhập bằng tài khoản Google của bạn, không qua API hay billing. Lần đầu chạy sẽ hiện cửa sổ Gemini để bạn đăng nhập một lần, sau đó cửa sổ tự ẩn và nhớ phiên. Nếu không cài, tắt ô "Tự động nhờ Gemini" trong giao diện là dùng app bình thường.
 
-## Chạy nhanh
+Phiên đăng nhập lưu trong `gemini_service/.webview_data/` và đã được gitignore. Không bao giờ commit thư mục này vì nó chứa cookie đăng nhập thật.
 
-Double-click **`run.bat`** - tự cài đặt mọi thứ còn thiếu ở lần chạy đầu tiên
-(engine ACE-Step, venv backend, venv gemini_service), rồi khởi động toàn bộ.
-Không cần mở PowerShell thủ công.
+## Cấu hình
 
-Yêu cầu: Python 3.11-3.12, Git, GPU NVIDIA (khuyến nghị ≥12GB VRAM cho cả 2
-engine), `ffmpeg`/`ffprobe` trong PATH.
+Biến môi trường (đều có giá trị mặc định hợp lý):
 
-## Cài đặt / chạy thủ công (nếu muốn kiểm soát từng bước)
+| Biến | Mặc định | Ý nghĩa |
+|---|---|---|
+| `ANYSONG_ENGINE_URL_TURBO` | `http://127.0.0.1:8001` | Địa chỉ engine Turbo |
+| `ANYSONG_ENGINE_URL_BASE` | `http://127.0.0.1:8002` | Địa chỉ engine Base |
+| `ANYSONG_GEMINI_SERVICE_URL` | `http://127.0.0.1:8004` | Địa chỉ gemini_service |
+| `ANYSONG_OUTPUT_DIR` | `./outputs` | Nơi lưu kết quả và lịch sử |
+| `ANYSONG_WHISPER_MODEL` | `small` | Cỡ model Whisper |
+| `ANYSONG_WHISPER_DEVICE` | `cpu` | `cpu` hoặc `cuda` |
+| `ANYSONG_WHISPER_COMPUTE_TYPE` | `int8` (CPU) / `float16` (CUDA) | Kiểu tính toán Whisper |
 
-```powershell
-# 1. Cài engine ACE-Step 1.5 (clone + uv sync - tải vài GB dependency lần đầu)
-.\scripts\setup_engine.ps1
+## Hiệu năng và hạn chế đã biết
 
-# 2. Cài venv riêng cho backend AnySong (nhẹ, vài giây)
-.\scripts\setup_backend.ps1
+- Đã kiểm chứng trên card 16 GB. Với engine Turbo chạy riêng và không offload, một bài 259 giây sinh xong trong khoảng 4 giây diffusion. Card ít VRAM hơn có thể cần bật `ACESTEP_OFFLOAD_TO_CPU` trong `app_launcher.py`, đổi lại sẽ chậm đi nhiều.
+- LM 5Hz của ACE-Step bị tắt (`ACESTEP_INIT_LLM=false`) vì trên Windows nó chưa có backend dùng được: không có Triton thì chạy cực chậm, có Triton thì treo lúc khởi tạo. Bật lại khi ACE-Step hỗ trợ Windows đầy đủ.
+- ACE-Step là model sinh nhạc, không phải voice cloning. Chỉ chế độ "giữ nguyên melody gốc" mới giữ được giọng ca sĩ, và vì bước tách vẫn là diffusion nên không hoàn toàn lossless.
+- Chế độ "Tách + Mix" sinh nhạc nền độc lập với lời nên có thể lệch nhịp trên bài dài. Khi đó thử "Complete AI".
 
-# 3. (Tuỳ chọn) Cài venv cho gemini_service - cần cho tính năng tự động nhờ Gemini
-.\scripts\setup_gemini_service.ps1
+## Khắc phục sự cố
 
-# 4. Khởi động
-.\scripts\start.ps1
-```
+- **Backend không khởi động**: mở `logs/backend.log`, hoặc chạy `scripts\start.ps1` để xem lỗi trực tiếp.
+- **Tạo nhạc thất bại**: xem `logs/engine_turbo.log` và `logs/engine_base.log`.
+- **Tính năng Gemini báo lỗi**: kiểm tra `logs/gemini_service.log`, hoặc xoá `gemini_service/.webview_data/` rồi đăng nhập lại.
+- **Dọn kết quả**: xoá bản trong lịch sử qua menu ⋮ trên giao diện để xoá luôn file trên đĩa.
 
-`run.bat` thực chất chỉ gọi các script trên theo đúng thứ tự. `start.ps1` sẽ:
-1. Mở 2 cửa sổ ACE-Step engine (`8001` xl-turbo, `8002` base) - lần đầu chạy sẽ
-   tự tải model weight (nhiều GB).
-2. Nếu đã setup, mở gemini_service (`8004`) - **lần đầu chạy sẽ hiện 1 cửa sổ
-   Gemini thật, đăng nhập Google trong đó 1 lần**, sau đó tự ẩn và nhớ phiên cho
-   các lần chạy sau.
-3. Đợi 2 engine sẵn sàng.
-4. Chạy AnySong backend + frontend tại `http://127.0.0.1:8877` và mở trình duyệt.
+## Lưu ý pháp lý
 
-## Cách dùng
-
-1. Chọn file nhạc gốc (wav/mp3/m4a/flac) - tên bài/ca sĩ được tự đoán từ tên file
-   để tìm lời (LRCLIB), hoặc tự nhập tay.
-2. Xác nhận/sửa lời bài hát - để trống = hoà tấu không lời.
-3. Mô tả style, hoặc để trống + bấm "Tạo bản cover" (nếu bật "Tự động nhờ
-   Gemini") để AI tự viết.
-4. Chọn chế độ: cover thường (nhanh) hay "Giữ nguyên melody gốc" (chậm hơn,
-   giữ đúng giọng hát).
-5. Bấm "Tạo bản cover" và đợi (vài chục giây tới vài phút tuỳ độ dài bài hát,
-   chế độ, và GPU).
-
-## Ghi chú
-
-- `engine/` và `gemini_service/.webview_data/` bị gitignore - project ngoài /
-  phiên đăng nhập Google, không phải code/dữ liệu của AnySong.
-- File kết quả lưu ở `outputs/` (cũng gitignore) - xoá qua menu ⋮ trong lịch sử
-  trên UI để dọn sạch cả file trên đĩa, không chỉ khỏi danh sách.
-- Model weight lớn chỉ tải khi engine chạy generation lần đầu, không tải sẵn khi
-  setup.
+Chỉ dùng với nhạc bạn có quyền sử dụng. Bản cover tạo ra vẫn là tác phẩm phái sinh của bài gốc, quyền tác giả của bài gốc không mất đi. Tôn trọng giấy phép của [ACE-Step 1.5](https://github.com/ace-step/ACE-Step-1.5) và các model đi kèm khi phân phối lại kết quả.
